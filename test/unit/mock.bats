@@ -244,6 +244,7 @@ EOF
 @test "mock - mock stub ls; mock_ls 0 -la; ls -l; assert_mock ls" {
     source ./src/mock.bash
 
+    # FIXME Clean-up helper_print_out_mocks
     function helper_print_out_mocks
     {
         declare -A MOCKS
@@ -283,6 +284,7 @@ EOF
 @test "mock - mock stub ls; mock_ls 0 -la; ls -la; assert_mock # error" {
     source ./src/mock.bash
 
+    # FIXME Clean-up helper_print_out_mocks
     function helper_print_out_mocks
     {
         declare -A MOCKS
@@ -316,6 +318,7 @@ EOF
 @test "mock - mock stub ls; mock_ls 0 -la; ls -la; ls -la; assert_mock # error" {
     source ./src/mock.bash
 
+    # FIXME Clean-up helper_print_out_mocks
     function helper_print_out_mocks
     {
         declare -A MOCKS
@@ -346,7 +349,33 @@ EOF
 -- assert_mock --
    function: ls
    MOCKS_FILENAME: ${MOCKS_FILENAME}
-   error: [1] Visited more than expected; visit=2; expected=1; current args=-la
+   error: [1] Visited more than expected; visits=2; expected=1; current args=-la
 Some mock function in 'ls' failed
+EOF
+}
+
+
+@test "mock - mock_<func> output" {
+    source ./src/mock.bash
+
+    function helper_mock_stub
+    {
+        mock stub ls
+        mock_ls 0 -1 "${MOCKS_FILENAME}"
+        mock_ls output <<EOF
+${MOCKS_FILENAME}
+EOF
+        ls -1 "${MOCKS_FILENAME}"
+        assert_mock ls
+        local _reto=$?
+        mock unstub ls
+        return $_reto
+    }
+    export -f helper_mock_stub
+
+    run helper_mock_stub
+    assert_success
+    assert_output <<EOF
+${MOCKS_FILENAME}
 EOF
 }

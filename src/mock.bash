@@ -77,13 +77,13 @@ function mock
             if [ "\$1" == "output" ]; then
                 __output="\$( mktemp "/tmp/mock.output.XXXXXXXX" )"
                 if [ "\$#" -gt 1 ]; then
-                    fail "No more params than 'output' is allowed when it is used\n"
-                    return \$?
+                    printf "%s" "\$*\n" > "\${__output}"
+                else
+                    printf "" > "\${__output}"
+                    while read -r line; do
+                        printf "\${line}\n" >> "\${__output}"
+                    done
                 fi
-                /bin/true > "\${__output}"
-                while read -r line; do
-                    printf "\${line}\n" >> "\${__output}"
-                done 
                 eval "MOCKS[\"${__funcname},output,\${_len}\"]=\"\${__output}\""
                 mock::save_array
                 return 0
@@ -125,7 +125,7 @@ EOF
             if [ "\${_visits}" -ge \${_len} ]; then
                 _errorlen=\$(( _errorlen + 1 ))
                 eval "MOCKS[\"${__funcname},errorlen\"]=\${_errorlen}"
-                eval "MOCKS[\"${__funcname},error,\${_errorlen}\"]=\"[\${_errorlen}] Visited more than expected; visit=\${_current}; expected=\${_len}; current args=\${*}\""
+                eval "MOCKS[\"${__funcname},error,\${_errorlen}\"]=\"[\${_errorlen}] Visited more than expected; visits=\${_current}; expected=\${_len}; current args=\${*}\""
                 mock::save_array
                 return 127
             fi
@@ -147,7 +147,7 @@ EOF
                 return 127
             fi
 
-            /bin/cat "\${_output}" >&1
+            cat "\${_output}" >&1
 
             mock::save_array
             return \${_status}
