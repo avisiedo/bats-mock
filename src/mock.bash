@@ -2,24 +2,11 @@
 # https://stackoverflow.com/questions/12944674/how-to-export-an-associative-array-hash-in-bash
 declare -A MOCKS
 
-MOCKS_FILENAME="$( mktemp /tmp/mocks.XXXXXXX )"
+MOCKS_FILENAME="$( mktemp /tmp/mock.XXXXXXXX )"
 export MOCKS_FILENAME
 
 function mock
 {
-    function mock::load_array
-    {
-        source "${MOCKS_FILENAME}"
-    }
-    export -fn mock::load_array
-
-    function mock::save_array
-    {
-        printf "\n" > "${MOCKS_FILENAME}"
-        mock::print_out_array >> "${MOCKS_FILENAME}"
-    }
-    export -fn mock::save_array
-
     function mock::print_out_array
     {
         for item in "${!MOCKS[@]}"
@@ -32,6 +19,24 @@ function mock
         done
     }
     export -fn mock::print_out_array
+
+    function mock::load_array
+    {
+        [ -e "${MOCKS_FILENAME}" ] || touch "${MOCKS_FILENAME}"
+        source "${MOCKS_FILENAME}"
+    }
+    export -fn mock::load_array
+
+    function mock::save_array
+    {
+        if [ ${#MOCKS[@]} -eq 0 ]; then
+            /bin/rm -f "${MOCKS_FILENAME}"
+        else
+            printf "\n" > "${MOCKS_FILENAME}"
+            mock::print_out_array >> "${MOCKS_FILENAME}"
+        fi
+    }
+    export -fn mock::save_array
 
     function mock::stub_one_function
     {
@@ -70,10 +75,10 @@ function mock
             local __output="/dev/null"
             local _len=\${MOCKS["${__funcname},len"]}
             if [ "\$1" == "output" ]; then
-                __output="\$( mktemp "/tmp/mocks.output.XXXXXXXX" )"
+                __output="\$( mktemp "/tmp/mock.output.XXXXXXXX" )"
                 if [ "\$#" -gt 1 ]; then
-                    printf "ERROR:No more params than 'output' is allowed when it is used\n"
-                    exit 1
+                    fail "No more params than 'output' is allowed when it is used\n"
+                    return \$?
                 fi
                 /bin/true > "\${__output}"
                 while read -r line; do
@@ -100,7 +105,7 @@ function mock
             mock::save_array
         }
 EOF
-        export -f "${__mock_funcname?}"
+        export -fn "${__mock_funcname?}"
 
         # shellcheck disable=SC1091
         source /dev/stdin <<EOF
@@ -117,12 +122,12 @@ EOF
             _current=\$(( _visits + 1 ))
             eval "MOCKS[\"${__funcname},visits\"]=\${_current}"
 
-            if [ "\${_visits}" -gt \${_len} ]; then
+            if [ "\${_visits}" -ge \${_len} ]; then
                 _errorlen=\$(( _errorlen + 1 ))
                 eval "MOCKS[\"${__funcname},errorlen\"]=\${_errorlen}"
-                eval "MOCKS[\"${__funcname},error,\${_errorlen}\"]=\"[\${_errorlen}] Visited more than expected; visits=\${_current}; args=\${*}\""
+                eval "MOCKS[\"${__funcname},error,\${_errorlen}\"]=\"[\${_errorlen}] Visited more than expected; visit=\${_current}; expected=\${_len}; current args=\${*}\""
                 mock::save_array
-                return 1
+                return 127
             fi
 
             local _status
@@ -139,7 +144,7 @@ EOF
                 eval "MOCKS[\"${__funcname},errorlen\"]=\"\${_errorlen}\""
                 eval "MOCKS[\"${__funcname},error,\${_errorlen}\"]=\"[\${_current}/\${_len}] Arguments does not match; expected=\${_args}; received=\$*\""
                 mock::save_array
-                return 1
+                return 127
             fi
 
             /bin/cat "\${_output}" >&1
@@ -148,7 +153,7 @@ EOF
             return \${_status}
         }
 EOF
-        export -f "${__funcname?}"
+        export -fn "${__funcname?}"
         mock::save_array
     }
 
@@ -232,15 +237,31 @@ function assert_mock
         [ ${_errorlen} -ne 0 ] || return 0
         for idx in $( seq 1 ${_errorlen} ); do
             _errormsg="${MOCKS[${_funcname},error,${idx}]}"
-            printf "assert_mock %s\nmockfile: %s\nerrormsg: %s\n" "${_funcname}" "${MOCKS_FILENAME}" "${_errormsg}" >&2
+            fail <<EOF
+-- assert_mock --
+   function: ${_funcname}
+   MOCKS_FILENAME: ${MOCKS_FILENAME}
+   error: ${_errormsg}
+EOF
+            return $?
         done
-
-        return 1
     }
+    export -fn assert_mock::one_function
 
+    if [ "$#" -eq 0 ]; then
+        fail "assert_mock requires at least one function name to check"
+        return $?
+    fi
+
+    local _failed=0
     for item in "$@"; do
-        assert_mock::one_function "$item" || return 1
+        assert_mock::one_function "$item" || _failed=1
     done
+    if [ ${_failed} -ne 0 ]; then
+        fail "Some mock function in '$*' failed"
+        return $?
+    fi
     return 0
 }
+export -f assert_mock
 
