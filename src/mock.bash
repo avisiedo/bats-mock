@@ -81,7 +81,7 @@ function mock
                 else
                     printf "" > "\${__output}"
                     while read -r line; do
-                        printf "\${line}\n" >> "\${__output}"
+                        printf "%s\n" "\${line}" >> "\${__output}"
                     done
                 fi
                 eval "MOCKS[\"${__funcname},output,\${_len}\"]=\"\${__output}\""
