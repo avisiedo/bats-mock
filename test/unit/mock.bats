@@ -347,6 +347,10 @@ EOF
     assert_failure
     assert_output <<EOF
 -- assert_mock --
+   visits: 2
+   len: 1
+   error: mocks was not visited the expected times
+-- assert_mock --
    function: ls
    MOCKS_FILENAME: ${MOCKS_FILENAME}
    error: [1] Visited more than expected; visits=2; expected=1; current args=-la

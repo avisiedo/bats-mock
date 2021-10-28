@@ -233,9 +233,19 @@ function assert_mock
         local _visits=${MOCKS["${_funcname},visits"]}
         local _errorlen=${MOCKS["${_funcname},errorlen"]}
         local _errormsg
+        local _return=0
 
-        [ ${_errorlen} -ne 0 ] || return 0
-        for idx in $( seq 1 ${_errorlen} ); do
+        [ "${_visits}" -eq "${_len}" ] || {
+            fail <<EOF
+-- assert_mock --
+   visits: ${_visits}
+   len: ${_len}
+   error: mocks was not visited the expected times
+EOF
+            _return=$?
+        }
+        [ "${_errorlen}" -ne 0 ] || return 0
+        for idx in $( seq 1 "${_errorlen}" ); do
             _errormsg="${MOCKS[${_funcname},error,${idx}]}"
             fail <<EOF
 -- assert_mock --
@@ -243,8 +253,9 @@ function assert_mock
    MOCKS_FILENAME: ${MOCKS_FILENAME}
    error: ${_errormsg}
 EOF
-            return $?
+            _return=$?
         done
+        return ${_return}
     }
     export -fn assert_mock::one_function
 
