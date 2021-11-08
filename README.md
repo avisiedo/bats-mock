@@ -10,8 +10,7 @@ Add modules as a submodule.
 ```shell
 git submodule init
 mkdir -p test/libs
-cd test/libs
-git submodule add https://github.com/avisiedo/bats-mock
+git submodule add https://github.com/avisiedo/bats-mock test/libs/bats-mock
 ```
 
 Create your first unit tests mocking.
