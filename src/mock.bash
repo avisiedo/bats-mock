@@ -147,7 +147,7 @@ EOF
                 return 127
             fi
 
-            cat "\${_output}" >&1
+            /bin/cat "\${_output}" >&1
 
             mock::save_array
             return \${_status}
@@ -178,7 +178,7 @@ EOF
                 if [ "${key#${mock_function},}" != "${key}" ]; then
                     if [[ "${key}" =~ .*,output ]] && [ "${MOCKS[${key}]}" != "/dev/null" ]; then
                         local output_path="${MOCKS[${key}]}"
-                        rm -f "${output_path}"
+                        /bin/rm -f "${output_path}"
                     fi
                     unset MOCKS["${key}"]
                     continue
