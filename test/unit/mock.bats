@@ -22,35 +22,23 @@ load '../libs/bats-assert/load'
 
     function helper_mock_stub 
     {
+        local _save_opt_e
+        if shopt -o errexit &>/dev/null; then _save_opt_e="-e"; else _save_opt_e="+e"; fi
         set -e
         mock stub ls
         helper_print_out_mocks
         mock unstub ls
+        set ${_save_opt_e}
     }
     export -f helper_mock_stub
 
     run helper_mock_stub
-
-    [ ${status} -eq 0 ]
-    local expected
-    local _result_output="$( mktemp /tmp/mock.XXXXXXXX )"
-    local _expected_output="$( mktemp /tmp/mock.XXXXXXXX )"
-    cat > "${_result_output}" <<EOF
-${output}
-EOF
-    cat > "${_expected_output}" <<EOF
+    assert_success
+    assert_output <<EOF
 MOCKS[ls,visits]="0"
-MOCKS[ls,errorlen]="0"
 MOCKS[ls,len]="0"
+MOCKS[ls,errorlen]="0"
 EOF
-
-    cmp "${_result_output}" "${_expected_output}"
-    local result=$?
-    rm -f "${__result_output}" "${_expected_output}"
-    [ ${result} -ne 0 ] || return 0
-    
-    return $status
-    [ "${status}" -eq 0 ]
 }
 
 @test "mock - mock stub ls; mock_ls 0 -la" {
@@ -69,39 +57,27 @@ EOF
 
     function helper_mock_stub 
     {
+        local _save_opt_e
+        if shopt -o errexit &>/dev/null; then _save_opt_e="-e"; else _save_opt_e="+e"; fi
         set -e
         mock stub ls
         mock_ls 0 ls -la
         helper_print_out_mocks
         mock unstub ls
+        set ${_save_opt_e}
     }
     export -f helper_mock_stub
 
     run helper_mock_stub
-
-    [ ${status} -eq 0 ]
-    local expected
-    local _result_output="$( mktemp /tmp/mock.XXXXXXXX )"
-    local _expected_output="$( mktemp /tmp/mock.XXXXXXXX )"
-    cat > "${_result_output}" <<EOF
-${output}
-EOF
-    cat > "${_expected_output}" <<EOF
-MOCKS[ls,visits]="0"
-MOCKS[ls,errorlen]="0"
-MOCKS[ls,len]="1"
-MOCKS[ls,status,1]="0"
+    assert_success
+    assert_output <<EOF
 MOCKS[ls,output,1]="/dev/null"
+MOCKS[ls,visits]="0"
+MOCKS[ls,len]="1"
+MOCKS[ls,errorlen]="0"
+MOCKS[ls,status,1]="0"
 MOCKS[ls,args,1]="ls -la"
 EOF
-
-    cmp "${_result_output}" "${_expected_output}"
-    local result=$?
-    rm -f "${__result_output}" "${_expected_output}"
-    [ ${result} -ne 0 ] || return 0
-    
-    return $status
-    [ "${status}" -eq 0 ]
 }
 
 @test "mock - mock stub ls; mock_ls 0 -la; ls -la" {
@@ -120,39 +96,52 @@ EOF
 
     function helper_mock_stub 
     {
+        local _save_opt_e
+        if shopt -o errexit &>/dev/null; then _save_opt_e="-e"; else _save_opt_e="+e"; fi
+        set -e
         mock stub ls
         mock_ls 0 -1 "${MOCKS_FILENAME}"
         ls -1 "${MOCKS_FILENAME}"
         helper_print_out_mocks
         mock unstub ls
+        set ${_save_opt_e}
     }
     export -f helper_mock_stub
 
     run helper_mock_stub
-
-    [ ${status} -eq 0 ]
-    local expected
-    local _result_output="$( mktemp /tmp/mock.XXXXXXXX )"
-    local _expected_output="$( mktemp /tmp/mock.XXXXXXXX )"
-    cat > "${_result_output}" <<EOF
-${output}
-EOF
-    cat > "${_expected_output}" <<EOF
-MOCKS[ls,visits]="1"
-MOCKS[ls,errorlen]="0"
-MOCKS[ls,len]="1"
-MOCKS[ls,status,1]="0"
+    assert_success
+    assert_output <<EOF
 MOCKS[ls,output,1]="/dev/null"
+MOCKS[ls,visits]="1"
+MOCKS[ls,len]="1"
+MOCKS[ls,errorlen]="0"
+MOCKS[ls,status,1]="0"
 MOCKS[ls,args,1]="-1 ${MOCKS_FILENAME}"
 EOF
 
-    cmp "${_result_output}" "${_expected_output}"
-    local result=$?
-    rm -f "${__result_output}" "${_expected_output}"
-    [ ${result} -ne 0 ] || return 0
+#     [ ${status} -eq 0 ]
+#     local expected
+#     local _result_output="$( mktemp /tmp/mock.XXXXXXXX )"
+#     local _expected_output="$( mktemp /tmp/mock.XXXXXXXX )"
+#     cat > "${_result_output}" <<EOF
+# ${output}
+# EOF
+#     cat > "${_expected_output}" <<EOF
+# MOCKS[ls,visits]="1"
+# MOCKS[ls,errorlen]="0"
+# MOCKS[ls,len]="1"
+# MOCKS[ls,status,1]="0"
+# MOCKS[ls,output,1]="/dev/null"
+# MOCKS[ls,args,1]="-1 ${MOCKS_FILENAME}"
+# EOF
+
+#     cmp "${_result_output}" "${_expected_output}"
+#     local result=$?
+#     rm -f "${__result_output}" "${_expected_output}"
+#     [ ${result} -ne 0 ] || return 0
     
-    return $status
-    [ "${status}" -eq 0 ]
+#     return $status
+#     [ "${status}" -eq 0 ]
 }
 
 @test "mock - mock stub ls; mock_ls 0 -la; ls -l # error" {
@@ -171,33 +160,38 @@ EOF
 
     function helper_mock_stub 
     {
+        local _save_opt_e
+        if shopt -o errexit &>/dev/null; then _save_opt_e="-e"; else _save_opt_e="+e"; fi
         set -e
         mock stub ls
         mock_ls 0 -la
         ls -l
+        return 0
         helper_print_out_mocks
         mock unstub ls
+        set ${_save_opt_e}
     }
     export -f helper_mock_stub
 
     run helper_mock_stub
+    assert_failure
 
-    [ ${status} -ne 0 ]
-    local expected
-    local _result_output="$( mktemp /tmp/mock.XXXXXXXX )"
-    local _expected_output="$( mktemp /tmp/mock.XXXXXXXX )"
-    cat > "${_result_output}" <<EOF
-${output}
-EOF
-    cat > "${_expected_output}" <<< ""
+#     [ ${status} -ne 0 ]
+#     local expected
+#     local _result_output="$( mktemp /tmp/mock.XXXXXXXX )"
+#     local _expected_output="$( mktemp /tmp/mock.XXXXXXXX )"
+#     cat > "${_result_output}" <<EOF
+# ${output}
+# EOF
+#     cat > "${_expected_output}" <<< ""
 
-    cmp "${_result_output}" "${_expected_output}"
-    local result=$?
-    rm -f "${__result_output}" "${_expected_output}"
-    [ ${result} -ne 0 ] || return 0
+#     cmp "${_result_output}" "${_expected_output}"
+#     local result=$?
+#     rm -f "${__result_output}" "${_expected_output}"
+#     [ ${result} -ne 0 ] || return 0
     
-    return $status
-    [ "${status}" -eq 0 ]
+#     return $status
+#     [ "${status}" -eq 0 ]
 }
 
 @test "mock - mock stub ls; mock_ls 0 -la; ls -la; assert_mock ls" {
@@ -231,11 +225,11 @@ EOF
 
     assert_success
     assert_output <<EOF
-MOCKS[ls,visits]="1"
-MOCKS[ls,errorlen]="0"
-MOCKS[ls,len]="1"
-MOCKS[ls,status,1]="0"
 MOCKS[ls,output,1]="/dev/null"
+MOCKS[ls,visits]="1"
+MOCKS[ls,len]="1"
+MOCKS[ls,errorlen]="0"
+MOCKS[ls,status,1]="0"
 MOCKS[ls,args,1]="-la"
 EOF
 }
